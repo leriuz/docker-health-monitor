@@ -1,0 +1,24 @@
+check_interval: 30
+
+endpoints:
+  - name: "GitHub API"
+    url: "https://api.github.com"
+    method: GET
+    timeout: 10
+    expected_status: 200
+
+  - name: "JSONPlaceholder"
+    url: "https://jsonplaceholder.typicode.com/posts/1"
+    method: GET
+    timeout: 10
+    expected_status: 200
+
+  - name: "httpbin"
+    url: "https://httpbin.org/get"
+    method: GET
+    timeout: 15
+    expected_status: 200
+
+alerts:
+  consecutive_failures: 3
+  webhook_url: ""

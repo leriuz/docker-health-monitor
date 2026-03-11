@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Monitor</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>🩺 Health Monitor</h1>
+        <p id="last-update">Loading...</p>
+    </header>
+
+    <main id="endpoints"></main>
+
+    <script>
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                render(data);
+            } catch (err) {
+                document.getElementById('last-update').textContent = 'Error loading data';
+            }
+        }
+
+        function render(data) {
+            const container = document.getElementById('endpoints');
+            const updateEl = document.getElementById('last-update');
+            updateEl.textContent = `Last updated: ${new Date(data.timestamp).toLocaleTimeString()}`;
+
+            container.innerHTML = data.endpoints.map(ep => `
+                <div class="card ${ep.status.toLowerCase()}">
+                    <div class="card-header">
+                        <span class="status-badge ${ep.status.toLowerCase()}">${ep.status}</span>
+                        <h2>${ep.name}</h2>
+                    </div>
+                    <div class="card-meta">
+                        <span class="url">${ep.url}</span>
+                        <span class="checked">Checked: ${new Date(ep.checked_at).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="card-stats">
+                        <div class="stat">
+                            <span class="stat-value">${ep.uptime_24h}%</span>
+                            <span class="stat-label">Uptime (24h)</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">${ep.response_time_ms ? Math.round(ep.response_time_ms) + 'ms' : '—'}</span>
+                            <span class="stat-label">Response Time</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">${ep.status_code || '—'}</span>
+                            <span class="stat-label">Status Code</span>
+                        </div>
+                    </div>
+                    ${ep.error_message ? `<div class="error-msg">${ep.error_message}</div>` : ''}
+                    <div class="history-bar">
+                        ${ep.history.map(h => `<div class="bar-segment ${h.status.toLowerCase()}" title="${h.status} — ${h.response_ms ? Math.round(h.response_ms) + 'ms' : 'N/A'}"></div>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        fetchStatus();
+        setInterval(fetchStatus, 15000);
+    </script>
+</body>
+</html>
