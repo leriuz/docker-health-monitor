@@ -1,6 +1,6 @@
 # 🩺 Docker Health Monitor
 
-Ever woken up to a dead service nobody noticed for hours? This tool watches your HTTP endpoints around the clock and shows you their status in a clean, auto-refreshing dashboard — all running in Docker, no external dependencies.
+This tool watches your HTTP endpoints around the clock and shows you their status in a clean, auto-refreshing dashboard — all running in Docker, no external dependencies.
 
 Built with Docker Compose, Python, Flask, and SQLite. Nothing exotic.
 
