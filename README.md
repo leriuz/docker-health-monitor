@@ -1,8 +1,12 @@
 # 🩺 Docker Health Monitor
 
-A containerized health-check system that monitors HTTP endpoints and displays results in a real-time dashboard. Built with Docker Compose, Python, Flask, and SQLite.
+Ever woken up to a dead service nobody noticed for hours? This tool watches your HTTP endpoints around the clock and shows you their status in a clean, auto-refreshing dashboard — all running in Docker, no external dependencies.
 
-## Architecture
+Built with Docker Compose, Python, Flask, and SQLite. Nothing exotic.
+
+## How it works
+
+A background checker polls your endpoints every N seconds and writes the results to a shared SQLite database. The dashboard reads from that same database and shows you what's up, what's down, and how things looked over time.
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌──────────────┐
@@ -15,20 +19,20 @@ A containerized health-check system that monitors HTTP endpoints and displays re
   every N seconds                               Shows status + history
 ```
 
-## Quick Start
+## Getting started
 
 ```bash
 git clone https://github.com/leriuz/docker-health-monitor.git
 cd docker-health-monitor
-cp config.example.yaml config.yaml   # Edit your endpoints
+cp config.example.yaml config.yaml   # add your endpoints here
 docker compose up --build
 ```
 
-Open **http://localhost:8080** to see the dashboard.
+Open **http://localhost:8080** — that's it.
 
 ## Configuration
 
-Edit `config.yaml` to define endpoints:
+Everything lives in `config.yaml`. Here's a realistic example:
 
 ```yaml
 check_interval: 30  # seconds between checks
@@ -57,13 +61,39 @@ endpoints:
       action: "ping"
 
 alerts:
-  consecutive_failures: 3  # alert after N consecutive fails
-  webhook_url: ""          # optional Slack/Discord webhook
+  consecutive_failures: 3  # ping after this many failures in a row
+  webhook_url: ""          # paste a Slack or Discord webhook URL here
 ```
 
-Environment variables in headers/body are expanded at runtime via `${VAR_NAME}` syntax.
+You can use `${VAR_NAME}` anywhere in headers or body — values are pulled from environment variables at runtime.
 
-## Project Structure
+## What the dashboard shows
+
+- **UP / DOWN / DEGRADED** status for each endpoint
+- Response time history (last 50 checks per endpoint)
+- 24-hour uptime percentage
+- Last check time and full response details
+- Auto-refreshes every 15 seconds — no babysitting required
+
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CHECK_INTERVAL` | `30` | Overrides the interval from config |
+| `DB_PATH` | `/data/checks.db` | Where the SQLite file lives |
+| `DASHBOARD_PORT` | `8080` | Port the dashboard listens on |
+| `AUTH_TOKEN` | — | Example token for authenticated endpoints |
+
+## Services at a glance
+
+| Service | Port | What it does |
+|---------|------|--------------|
+| `checker` | — | Polls endpoints in a loop, writes to SQLite |
+| `dashboard` | 8080 | Serves the status UI, reads from SQLite |
+
+Both share a Docker volume (`monitor-data`) so the database is accessible to both.
+
+## Project layout
 
 ```
 docker-health-monitor/
@@ -73,16 +103,16 @@ docker-health-monitor/
 ├── healthcheck/
 │   ├── Dockerfile
 │   ├── requirements.txt
-│   ├── checker.py          # Main check loop
-│   ├── config_loader.py    # YAML config parser
-│   ├── db.py               # SQLite operations
-│   └── notifier.py         # Alert notifications
+│   ├── checker.py          # main check loop
+│   ├── config_loader.py    # parses the YAML config
+│   ├── db.py               # SQLite reads/writes
+│   └── notifier.py         # sends alerts
 ├── dashboard/
 │   ├── Dockerfile
 │   ├── requirements.txt
-│   ├── app.py              # Flask application
+│   ├── app.py              # Flask app
 │   ├── templates/
-│   │   └── index.html      # Dashboard UI
+│   │   └── index.html
 │   └── static/
 │       └── style.css
 ├── .gitignore
@@ -90,43 +120,17 @@ docker-health-monitor/
 └── README.md
 ```
 
-## Services
+## Running without Docker
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| `checker` | — | Runs health checks on a loop, writes to SQLite |
-| `dashboard` | 8080 | Serves status UI, reads from SQLite |
-
-Both services share a Docker volume (`monitor-data`) for the SQLite database.
-
-## Dashboard Features
-
-- Live endpoint status (UP / DOWN / DEGRADED)
-- Response time history (last 50 checks per endpoint)
-- Uptime percentage (24h rolling window)
-- Last check timestamp and response details
-- Auto-refresh every 15 seconds
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CHECK_INTERVAL` | `30` | Override config check interval |
-| `DB_PATH` | `/data/checks.db` | SQLite database path |
-| `DASHBOARD_PORT` | `8080` | Dashboard listen port |
-| `AUTH_TOKEN` | — | Example token for authenticated endpoints |
-
-## Development
-
-Run without Docker for local development:
+Useful during development:
 
 ```bash
-# Terminal 1: Health checker
+# Terminal 1 — run the checker
 cd healthcheck
 pip install -r requirements.txt
 python checker.py --config ../config.yaml
 
-# Terminal 2: Dashboard
+# Terminal 2 — run the dashboard
 cd dashboard
 pip install -r requirements.txt
 python app.py
